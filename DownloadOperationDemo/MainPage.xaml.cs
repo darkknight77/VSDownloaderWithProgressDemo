@@ -29,19 +29,34 @@ namespace DownloadOperationDemo
     /// </summary>
     public sealed partial class MainPage : Page
     {
+        StorageFile file;
+        String ext="";
         DownloadOperation downloadOperation;
         CancellationTokenSource cancellationToken;
+        String[] videoType = {  "video/mp4", "video/x-matroska", "video/webm", "video/avi", "video/mpeg", "video/mpg", "video/msvideo"
+       , "video/quicktime", "video/x-mpeg", "video/x-mpeg2a"
+       , "video/x-ms-asf", "video/x-ms-asf-plugin", "video/x-ms-wm"
+       , "video/x-ms-wmv", "video/x-ms-wmx", "video/x-ms-wvx","video/vnd.dlna.mpeg-tts"
+       , "video/x-msvideo"  };
+        String[] audioType = { "audio/mp3", "audio/mp4", "audio/aiff", "audio/basic", "audio/mid", "audio/midi"
+        , "audio/mpeg", "audio/mpegurl", "audio/mpg", "audio/wav"
+        , "audio/x-aiff", "audio/x-mid", "audio/x-midi", "audio/x-mp3"
+        , "audio/x-mpeg", "audio/x-mpegurl" , "audio/x-mpg", "audio/x-ms-wax"
+        , "audio/x-ms-wma", "audio/x-wav" };
         public MainPage()
         {
             this.InitializeComponent();
            
-        }
-         async private void download() {
-           
-            StorageFile file = await KnownFolders.VideosLibrary.CreateFileAsync("file.mp4", CreationCollisionOption.GenerateUniqueName);
+        } 
+
+        //https://mediaplatstorage1.blob.core.windows.net/windows-universal-samples-media/elephantsdream-clip-h264_sd-aac_eng-aac_spa-aac_eng_commentary-srt_eng-srt_por-srt_swe.mkv
+       
+        async private void download() {
+           getFileExtension();
+           file = await KnownFolders.VideosLibrary.CreateFileAsync($"file{ext}", CreationCollisionOption.GenerateUniqueName);
             IRandomAccessStream fileStream = await file.OpenAsync(FileAccessMode.Read);
             var downloader = new BackgroundDownloader();
-                downloadOperation = downloader.CreateDownload(new Uri("https://mediaplatstorage1.blob.core.windows.net/windows-universal-samples-media/elephantsdream-clip-h264_sd-aac_eng-aac_spa-aac_eng_commentary-srt_eng-srt_por-srt_swe.mkv"), file);
+                downloadOperation = downloader.CreateDownload(new Uri(UrlText.Text), file);
                 MediaSource mediaSource =
                       MediaSource.CreateFromDownloadOperation(downloadOperation);
             downloadOperation.IsRandomAccessRequired = true;
@@ -49,13 +64,22 @@ namespace DownloadOperationDemo
             
             mediaPlayerElement.Source = mediaSource;
         }
+
+        private string getFileExtension() {
+            String urlText = UrlText.Text;
+            string[] urlarray = urlText.Split("."); 
+            Debug.WriteLine($".{urlarray[urlarray.Length - 1]}");
+          
+            return $".{urlarray[urlarray.Length - 1]}";
+        }
         async private void downloadWithProgress()
         {
-
-            StorageFile file = await KnownFolders.VideosLibrary.CreateFileAsync("file.mp4", CreationCollisionOption.GenerateUniqueName);
+            ext = getFileExtension();
+            file = await KnownFolders.VideosLibrary.CreateFileAsync($"file{ext}", CreationCollisionOption.GenerateUniqueName);
             IRandomAccessStream fileStream = await file.OpenAsync(FileAccessMode.Read);
             var downloader = new BackgroundDownloader();
-            downloadOperation = downloader.CreateDownload(new Uri("https://mediaplatstorage1.blob.core.windows.net/windows-universal-samples-media/elephantsdream-clip-h264_sd-aac_eng-aac_spa-aac_eng_commentary-srt_eng-srt_por-srt_swe.mkv"), file);
+           
+            downloadOperation = downloader.CreateDownload(new Uri(UrlText.Text), file);
             Progress<DownloadOperation> progress = new Progress<DownloadOperation>(progressChanged);
             cancellationToken = new CancellationTokenSource();
             try
@@ -108,11 +132,13 @@ namespace DownloadOperationDemo
             if (progress >= 100)
             {
                 Debug.WriteLine("Download complete Starting playback");
-
-                MediaSource mediaSource = MediaSource.CreateFromDownloadOperation(downloadOperation);
-                mediaPlayerElement.Source = mediaSource;
-                mediaPlayerElement.AutoPlay = true;
-            }
+                if (isAudioType(file) || isVideoType(file) )
+                {
+                    MediaSource mediaSource = MediaSource.CreateFromDownloadOperation(downloadOperation);
+                    mediaPlayerElement.Source = mediaSource;
+                    mediaPlayerElement.AutoPlay = true;
+                }
+                }
         }
 
         private void btn_Click(object sender, RoutedEventArgs e)
@@ -128,6 +154,31 @@ namespace DownloadOperationDemo
         private void btn_resume_Click(object sender, RoutedEventArgs e)
         {
             downloadOperation.Resume();
+        }
+        private Boolean isVideoType(StorageFile file)
+        {
+
+
+            foreach (String type in videoType)
+            {
+                if (file.ContentType.Equals(type)) return true;
+
+            }
+
+            return false;
+        }
+        private Boolean isAudioType(StorageFile file)
+        {
+
+
+            foreach (String type in audioType)
+            {
+                if (file.ContentType.Equals(type)) return true;
+
+            }
+
+
+            return false;
         }
     }
     }
